@@ -1,0 +1,144 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * @author    Rick Buczynski <richard.buczynski@gmail.com>
+ * @copyright 2019 Rick Buczynski. All Rights Reserved.
+ * @license   MIT
+ */
+
+namespace LowlyPHP;
+
+define('DS', DIRECTORY_SEPARATOR);
+
+/**
+ * Local web service environment.
+ */
+
+$help = <<<EOF
+Built-in web server. Starts a local server on port 80 for serving API requests.
+
+Usage: webserver [start|stop] [host[:port]] [root]
+
+Options:
+host    The binding hostname. Defaults to localhost.
+port    The observable port. Defaults to 80.
+root    The web root path. Defaults to web server path.
+router  The path to a custom router. Defaults to web/router.php.
+
+EOF;
+
+$parameters = [
+    'action' => 'start',
+    'host' => 'localhost',
+    'port' => '8888',
+    'root' => \rtrim(posix_getcwd(), DS),
+    'router_path' => \rtrim(posix_getcwd(), DS) . DS . 'web' . DS . 'router.php',
+    'pid_path' => __DIR__ . DS . 'webserver.pid',
+];
+
+function error($message = '', $showHelp = false) {
+    echo $message . PHP_EOL;
+
+    if ($showHelp) {
+        help();
+    }
+
+    exit(1);
+}
+
+function help() {
+    global $help;
+    echo PHP_EOL . $help . PHP_EOL;
+}
+
+function check_pid(&$pid, $asBool = false) {
+    sleep(1);
+    $pid = \exec(\sprintf('ps -p %d || echo "0"', $pid)) === "0"
+        ? ($asBool ? false : \sprintf('Process ID %d not found.', $pid))
+        : $pid;
+}
+
+$argv = \array_slice($argv, 1);
+
+if (empty($argv)) {
+    $argv[0] = 'start';
+}
+
+if (\in_array($argv[0], ['help', '-h'])) {
+    help();
+    exit(0);
+}
+
+if (!\in_array($argv[0], ['start', 'stop'])) {
+    error('Invalid web server action. Must be one of: start, stop', true);
+}
+
+$parameters['action'] = $argv[0];
+
+if ($parameters['action'] === 'stop') {
+    if (!\file_exists($parameters['pid_path'])) {
+        error('No web server process exists.');
+    }
+
+    \exec(\sprintf('kill -9 %d', \file_get_contents($parameters['pid_path'])));
+    \unlink($parameters['pid_path']);
+
+    echo 'Web server stopped.' . PHP_EOL;
+    exit;
+}
+
+if (isset($argv[1])) {
+    $config = \explode(':', $argv[1]);
+    if (!empty($config[0])) {
+        $parameters['host'] = $config[0];
+
+        if (!empty($config[1])) {
+            $parameters['port'] = $config[1];
+        }
+    }
+}
+
+if (isset($argv[2])) {
+    $parameters['root'] = $argv[2];
+}
+
+if (!\file_exists($parameters['root'])) {
+    error(\sprintf('Web server root directory "%s" is invalid.', $parameters['root']), true);
+}
+
+if (\file_exists($parameters['pid_path'])) {
+    $pid = (int) \file_get_contents($parameters['pid_path']);
+    check_pid($pid, true);
+
+    if (\is_numeric($pid)) {
+        error(\sprintf('Web server may already be running as PID %d.', $pid));
+    }
+}
+
+$pid = \trim(
+    \shell_exec(
+        \sprintf(
+            'php -S %s:%s -t %s %s >/dev/null 2>&1 & printf $!',
+            $parameters['host'],
+            $parameters['port'],
+            $parameters['root'],
+            $parameters['router_path']
+        )
+    )
+);
+
+check_pid($pid);
+
+if (!\is_numeric($pid)) {
+    error(\sprintf('Failed to start web server: %s', $pid));
+}
+
+\file_put_contents($parameters['pid_path'], $pid);
+
+echo \sprintf(
+    'Web server started on %s:%s under PID %d',
+    $parameters['host'],
+    $parameters['port'],
+    $pid
+) . PHP_EOL;

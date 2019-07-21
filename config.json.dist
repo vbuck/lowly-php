@@ -1,0 +1,54 @@
+{
+    "description": "Default application configuration for LowlyPHP",
+    "web": {
+        "url": "http://localhost:80/",
+        "debug_mode": true
+    },
+    "paths": {
+        "LowlyPHP": "./src",
+        "LowlyPHP\\web": "./web",
+        "LowlyPHP\\*": "./extensions"
+    },
+    "connections": {
+        "default": {
+            "host": "localhost",
+            "name": "database",
+            "user": "root",
+            "pass": "root",
+            "port": "3306",
+            "charset": "utf8"
+        }
+    },
+    "providers": {
+        "LowlyPHP\\Service\\Api\\FilterInterface": {
+            "type": "LowlyPHP\\Provider\\Api\\Filter"
+        },
+        "LowlyPHP\\Service\\Api\\RepositorySearchInterface": {
+            "type": "LowlyPHP\\Provider\\Api\\RepositorySearch"
+        },
+        "LowlyPHP\\Service\\Resource\\Storage\\Schema\\ColumnInterface": {
+            "type": "LowlyPHP\\Provider\\Resource\\Storage\\Schema\\Column"
+        },
+        "LowlyPHP\\Service\\Resource\\Storage\\SchemaInterface": {
+            "type": "LowlyPHP\\Provider\\Resource\\Storage\\Schema"
+        },
+        "LowlyPHP\\Service\\Resource\\Storage\\SchemaMapperInterface": {
+            "type": "LowlyPHP\\Provider\\Resource\\Storage\\SchemaMapper"
+        },
+        "LowlyPHP\\Service\\Resource\\EntityManagerInterface": {
+            "type": "LowlyPHP\\Provider\\Resource\\EntityManager"
+        },
+        "LowlyPHP\\Service\\Resource\\EntityMapperInterface": {
+            "type": "LowlyPHP\\Provider\\Resource\\EntityMapper"
+        },
+        "LowlyPHP\\Service\\Resource\\StorageInterface": {
+            "type": "LowlyPHP\\Provider\\Resource\\Storage\\Driver\\Pdo\\Mysql"
+        },
+        "LowlyPHP\\Service\\Resource\\SerializerInterface": {
+            "type": "LowlyPHP\\Provider\\Resource\\Serializer"
+        },
+        "LowlyPHP\\Service\\Resource\\LoggerInterface": {
+            "type": "LowlyPHP\\Provider\\Resource\\Logger"
+        }
+    }
+}
