@@ -275,14 +275,14 @@ class ApplicationManager
             if (isset($arguments[$parameter->getName()])) {
                 $output[] = $arguments[$parameter->getName()];
             } else {
-                $value = $parameter->getType()
-                    ? (
-                        $parameter->getType()->getName()
-                        ?: ($parameter->isDefaultValueAvailable() ? $parameter->getDefaultValue() : null)
-                    ) : null;
+                $value = $parameter->getClass()
+                    ? $parameter->getClass()->getName()
+                    : (
+                    $parameter->isDefaultValueAvailable() ? $parameter->getDefaultValue() : null
+                    );
 
                 try {
-                    if (\is_string($value)) {
+                    if ($parameter->getClass() && \is_string($value)) {
                         $value = $this->getObject($value);
                     }
                 } catch (\Exception $error) {
