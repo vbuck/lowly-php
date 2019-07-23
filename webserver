@@ -18,7 +18,7 @@ define('DS', DIRECTORY_SEPARATOR);
 $help = <<<EOF
 Built-in web server. Starts a local server on port 80 for serving API requests.
 
-Usage: webserver [start|stop] [host[:port]] [root]
+Usage: webserver [start|stop|status] [host[:port]] [root]
 
 Options:
 host    The binding hostname. Defaults to localhost.
@@ -70,13 +70,24 @@ if (\in_array($argv[0], ['help', '-h'])) {
     exit(0);
 }
 
-if (!\in_array($argv[0], ['start', 'stop'])) {
-    error('Invalid web server action. Must be one of: start, stop', true);
+if (!\in_array($argv[0], ['start', 'stop', 'status'])) {
+    error('Invalid web server action. Must be one of: start, stop, status', true);
 }
 
 $parameters['action'] = $argv[0];
 
-if ($parameters['action'] === 'stop') {
+if ($parameters['action'] === 'status') {
+    $pid = (int) @\file_get_contents($parameters['pid_path']);
+    check_pid($pid, true);
+
+    if ($pid) {
+        echo \sprintf('Web server is running under PID %d.', $pid) . PHP_EOL;
+        exit(0);
+    } else {
+        echo 'Web server is not running.' . PHP_EOL;
+        exit(1);
+    }
+} elseif ($parameters['action'] === 'stop') {
     if (!\file_exists($parameters['pid_path'])) {
         error('No web server process exists.');
     }
