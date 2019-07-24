@@ -313,7 +313,7 @@ class Mysql implements StorageInterface, SchemaStorageInterface
      * @throws \LowlyPHP\Exception\ConfigException
      * @codeCoverageIgnore
      */
-    private function connect() : void
+    protected function connect() : void
     {
         $this->validate();
 
@@ -333,6 +333,70 @@ class Mysql implements StorageInterface, SchemaStorageInterface
         $this->connection->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 
         $this->prepare();
+    }
+
+    /**
+     * Describe the given table schema.
+     *
+     * @param string $table
+     * @return array
+     */
+    private function describeTable(string $table) : array
+    {
+        /** @var \PDOStatement $statement */
+        $statement = $this->connection->prepare(
+            \sprintf(
+                "SELECT *
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = '%s'
+                AND TABLE_NAME = '%s'",
+                $this->config[self::CONFIG_NAME],
+                $table
+            )
+        );
+
+        $statement->execute();
+
+        return (array) $statement->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Generate a mock of the current schema applied to the current table.
+     *
+     * @return SchemaInterface
+     * @throws \LowlyPHP\Exception\ConfigException
+     */
+    private function mockActualSchema() : SchemaInterface
+    {
+        /** @var array $descriptor */
+        $descriptor = $this->describeTable($this->config[self::CONFIG_TABLE]);
+        /** @var ColumnInterface[] $columns */
+        $columns = [];
+        $typeMap = [
+            'int' => ColumnInterface::TYPE_INT,
+            'tinyint' => ColumnInterface::TYPE_BOOL,
+            'decimal' => ColumnInterface::TYPE_FLOAT,
+            'text' => ColumnInterface::TYPE_STRING,
+            'varchar' => ColumnInterface::TYPE_STRING,
+        ];
+
+        foreach ($descriptor as $column) {
+            \preg_match('/[^(]*(\(([0-9,]+)\))/', $column['COLUMN_TYPE'], $typeInfo);
+            $length = \trim((string) \end($typeInfo));
+
+            $columns[] = $this->columnFactory->create(
+                $column['COLUMN_NAME'],
+                \strlen($length) ? $length : '0',
+                $typeMap[\strtolower($column['DATA_TYPE'])] ?? ColumnInterface::TYPE_STRING,
+                []
+            );
+        }
+
+        return $this->schemaFactory->create(
+            SchemaInterface::DEFAULT_NAME,
+            $this->config[self::CONFIG_TABLE],
+            $columns
+        );
     }
 
     /**
@@ -407,67 +471,25 @@ class Mysql implements StorageInterface, SchemaStorageInterface
     }
 
     /**
-     * Describe the given table schema.
+     * Initialize the connection details.
      *
-     * @param string $table
-     * @return array
+     * @param bool $reconnect
+     * @throws \LowlyPHP\Exception\ConfigException
+     * @throws StorageReadException
      */
-    private function describeTable(string $table) : array
+    private function setConnection($reconnect = true) : void
     {
-        /** @var \PDOStatement $statement */
-        $statement = $this->connection->prepare(
-            \sprintf(
-                "SELECT *
-                FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_SCHEMA = '%s'
-                AND TABLE_NAME = '%s'",
-                $this->config[self::CONFIG_NAME],
-                $table
+        $this->config = array_merge(
+            $this->config,
+            $this->app->config(
+                \sprintf('connections.%s', $this->connectionName)
             )
         );
 
-        $statement->execute();
-
-        return (array) $statement->fetchAll(\PDO::FETCH_ASSOC);
-    }
-
-    /**
-     * Generate a mock of the current schema applied to the current table.
-     *
-     * @return SchemaInterface
-     * @throws \LowlyPHP\Exception\ConfigException
-     */
-    private function mockActualSchema() : SchemaInterface
-    {
-        /** @var array $descriptor */
-        $descriptor = $this->describeTable($this->config[self::CONFIG_TABLE]);
-        /** @var ColumnInterface[] $columns */
-        $columns = [];
-        $typeMap = [
-            'int' => ColumnInterface::TYPE_INT,
-            'tinyint' => ColumnInterface::TYPE_BOOL,
-            'decimal' => ColumnInterface::TYPE_FLOAT,
-            'text' => ColumnInterface::TYPE_STRING,
-            'varchar' => ColumnInterface::TYPE_STRING,
-        ];
-
-        foreach ($descriptor as $column) {
-            \preg_match('/[^(]*(\(([0-9,]+)\))/', $column['COLUMN_TYPE'], $typeInfo);
-            $length = \trim((string) \end($typeInfo));
-
-            $columns[] = $this->columnFactory->create(
-                $column['COLUMN_NAME'],
-                \strlen($length) ? $length : '0',
-                $typeMap[\strtolower($column['DATA_TYPE'])] ?? ColumnInterface::TYPE_STRING,
-                []
-            );
+        if ($reconnect && $this->connection) {
+            $this->connection = null;
+            $this->connect();
         }
-
-        return $this->schemaFactory->create(
-            SchemaInterface::DEFAULT_NAME,
-            $this->config[self::CONFIG_TABLE],
-            $columns
-        );
     }
 
     /**
@@ -494,28 +516,6 @@ class Mysql implements StorageInterface, SchemaStorageInterface
         $statement->execute();
 
         return (bool) $statement->fetchColumn();
-    }
-
-    /**
-     * Initialize the connection details.
-     *
-     * @param bool $reconnect
-     * @throws \LowlyPHP\Exception\ConfigException
-     * @throws StorageReadException
-     */
-    private function setConnection($reconnect = true) : void
-    {
-        $this->config = array_merge(
-            $this->config,
-            $this->app->config(
-                \sprintf('connections.%s', $this->connectionName)
-            )
-        );
-
-        if ($reconnect && $this->connection) {
-            $this->connection = null;
-            $this->connect();
-        }
     }
 
     /**
