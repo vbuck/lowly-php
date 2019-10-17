@@ -30,7 +30,7 @@ class Serializer implements SerializerInterface
             return $input->serialize();
         }
 
-        return \json_encode($input);
+        return (string) @\json_encode($input);
     }
 
     /**
