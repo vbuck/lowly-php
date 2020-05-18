@@ -26,17 +26,17 @@ use LowlyPHP\Service\Resource\Storage\SchemaStorageInterface;
  */
 class Sql implements ConverterInterface
 {
-    /** @var ApplicationManager */
-    private $app;
-
     /** @var ColumnFactory */
-    private $columnFactory;
+    protected $columnFactory;
 
     /** @var SchemaFactory */
-    private $schemaFactory;
+    protected $schemaFactory;
 
     /** @var SchemaMapperInterface */
-    private $schemaMapper;
+    protected $schemaMapper;
+
+    /** @var ApplicationManager */
+    private $app;
 
     /**
      * @param SchemaFactory $schemaFactory
@@ -135,12 +135,31 @@ class Sql implements ConverterInterface
     }
 
     /**
+     * Generate an index name for the given data set.
+     *
+     * @param string $table
+     * @param string[] $columns
+     * @return string
+     * @throws \InvalidArgumentException
+     */
+    protected function createIndexName(string $table, array $columns) : string
+    {
+        if (empty($columns)) {
+            throw new \InvalidArgumentException('Index name generation requires at least 1 column.');
+        }
+
+        $key = $table . ';' . \implode(':', $columns);
+
+        return 'IDX_' . \sha1($key);
+    }
+
+    /**
      * Generate a column definition as a SQL statement partial.
      *
      * @param ColumnInterface $column
      * @return string
      */
-    private function getColumnDefinition(ColumnInterface $column) : string
+    protected function getColumnDefinition(ColumnInterface $column) : string
     {
         $metadata = $column->getMetadata();
         $default = isset($metadata[SchemaStorageInterface::META_KEY_DEFAULT_VALUE])
@@ -153,7 +172,7 @@ class Sql implements ConverterInterface
                 $column->getName(),
                 $this->getColumnType($column->getType(), $column->getLength()),
                 $column->getLength() ? "({$column->getLength()})" : '',
-                !empty($metadata[SchemaStorageInterface::META_KEY_IDENTIFIER]) ? 'AUTO_INCREMENT PRIMARY KEY' : '',
+                !empty($metadata[SchemaStorageInterface::META_KEY_IDENTIFIER]) ? $this->getPrimaryKeyAttribute() : '',
                 $default ? ('DEFAULT ' . ($default === 'NULL' ? $default : ("'" . addslashes($default) . "'"))) : ''
             )
         );
@@ -166,7 +185,7 @@ class Sql implements ConverterInterface
      * @param string|null $length
      * @return string
      */
-    private function getColumnType(string $input, string $length = null) : string
+    protected function getColumnType(string $input, string $length = null) : string
     {
         switch ($input) {
             case ColumnInterface::TYPE_BOOL :
@@ -188,63 +207,12 @@ class Sql implements ConverterInterface
     }
 
     /**
-     * Generate relationship constraints as SQL statement partials.
-     *
-     * @param SchemaInterface $schema
-     * @return string[]
-     * @throws ConfigException
-     */
-    private function getRelationshipDefinitions(SchemaInterface $schema) : array
-    {
-        /** @var string[] $relationships */
-        $relationships = [];
-
-        /** @var ColumnInterface $column */
-        foreach ($schema->getColumns() as $column) {
-            /** @var array $metadata */
-            $metadata = $column->getMetadata();
-
-            if (!isset($metadata[SchemaStorageInterface::META_KEY_RELATIONSHIPS])) {
-                continue;
-            }
-
-            foreach ((array) $metadata[SchemaStorageInterface::META_KEY_RELATIONSHIPS] as $relationship) {
-                if (empty($relationship) || \count($relationship) < 2) {
-                    continue;
-                }
-
-                /** @var \LowlyPHP\Service\Resource\EntityInterface|null $relatedEntity */
-                try {
-                    $relatedEntity = $this->app->getObject($relationship[0]);
-                } catch (ConfigException $error) {
-                    continue;
-                }
-
-                if (empty($relatedEntity)) {
-                    continue;
-                }
-
-                /** @var SchemaInterface $relatedSchema */
-                $relatedSchema = $this->schemaMapper->map($relatedEntity);
-                $relationships[] = \sprintf(
-                    "FOREIGN KEY (`%s`) REFERENCES `%s`(`%s`) ON DELETE CASCADE ON UPDATE CASCADE",
-                    $column->getName(),
-                    $relatedSchema->getSource(),
-                    $relationship[1]
-                );
-            }
-        }
-
-        return $relationships;
-    }
-
-    /**
      * Generate index definitions as SQL statement partials.
      *
      * @param SchemaInterface $schema
      * @return array
      */
-    private function getIndexDefinitions(SchemaInterface $schema) : array
+    protected function getIndexDefinitions(SchemaInterface $schema) : array
     {
         /** @var array $groups */
         $groups = [
@@ -288,21 +256,63 @@ class Sql implements ConverterInterface
     }
 
     /**
-     * Generate an index name for the given data set.
+     * Get the primary key attribute definition.
      *
-     * @param string $table
-     * @param string[] $columns
      * @return string
-     * @throws \InvalidArgumentException
      */
-    private function createIndexName(string $table, array $columns) : string
+    protected function getPrimaryKeyAttribute() : string
     {
-        if (empty($columns)) {
-            throw new \InvalidArgumentException('Index name generation requires at least 1 column.');
+        return 'AUTO_INCREMENT PRIMARY KEY';
+    }
+
+    /**
+     * Generate relationship constraints as SQL statement partials.
+     *
+     * @param SchemaInterface $schema
+     * @return string[]
+     * @throws ConfigException
+     */
+    protected function getRelationshipDefinitions(SchemaInterface $schema) : array
+    {
+        /** @var string[] $relationships */
+        $relationships = [];
+
+        /** @var ColumnInterface $column */
+        foreach ($schema->getColumns() as $column) {
+            /** @var array $metadata */
+            $metadata = $column->getMetadata();
+
+            if (!isset($metadata[SchemaStorageInterface::META_KEY_RELATIONSHIPS])) {
+                continue;
+            }
+
+            foreach ((array) $metadata[SchemaStorageInterface::META_KEY_RELATIONSHIPS] as $relationship) {
+                if (empty($relationship) || \count($relationship) < 2) {
+                    continue;
+                }
+
+                /** @var \LowlyPHP\Service\Resource\EntityInterface|null $relatedEntity */
+                try {
+                    $relatedEntity = $this->app->getObject($relationship[0]);
+                } catch (ConfigException $error) {
+                    continue;
+                }
+
+                if (empty($relatedEntity)) {
+                    continue;
+                }
+
+                /** @var SchemaInterface $relatedSchema */
+                $relatedSchema = $this->schemaMapper->map($relatedEntity);
+                $relationships[] = \sprintf(
+                    "FOREIGN KEY (`%s`) REFERENCES `%s`(`%s`) ON DELETE CASCADE ON UPDATE CASCADE",
+                    $column->getName(),
+                    $relatedSchema->getSource(),
+                    $relationship[1]
+                );
+            }
         }
 
-        $key = $table . ';' . \implode(':', $columns);
-
-        return 'IDX_' . \sha1($key);
+        return $relationships;
     }
 }

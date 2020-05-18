@@ -61,6 +61,14 @@ class Mysql implements StorageInterface, SchemaStorageInterface
     /** @var SchemaInterface */
     protected $schema;
 
+    protected $typeMap = [
+        'int' => ColumnInterface::TYPE_INT,
+        'tinyint' => ColumnInterface::TYPE_BOOL,
+        'decimal' => ColumnInterface::TYPE_FLOAT,
+        'text' => ColumnInterface::TYPE_STRING,
+        'varchar' => ColumnInterface::TYPE_STRING,
+    ];
+
     /** @var ApplicationManager */
     private $app;
 
@@ -341,7 +349,7 @@ class Mysql implements StorageInterface, SchemaStorageInterface
      * @param string $table
      * @return array
      */
-    private function describeTable(string $table) : array
+    protected function describeTable(string $table) : array
     {
         /** @var \PDOStatement $statement */
         $statement = $this->connection->prepare(
@@ -366,19 +374,12 @@ class Mysql implements StorageInterface, SchemaStorageInterface
      * @return SchemaInterface
      * @throws \LowlyPHP\Exception\ConfigException
      */
-    private function mockActualSchema() : SchemaInterface
+    protected function mockActualSchema() : SchemaInterface
     {
         /** @var array $descriptor */
         $descriptor = $this->describeTable($this->config[self::CONFIG_TABLE]);
         /** @var ColumnInterface[] $columns */
         $columns = [];
-        $typeMap = [
-            'int' => ColumnInterface::TYPE_INT,
-            'tinyint' => ColumnInterface::TYPE_BOOL,
-            'decimal' => ColumnInterface::TYPE_FLOAT,
-            'text' => ColumnInterface::TYPE_STRING,
-            'varchar' => ColumnInterface::TYPE_STRING,
-        ];
 
         foreach ($descriptor as $column) {
             \preg_match('/[^(]*(\(([0-9,]+)\))/', $column['COLUMN_TYPE'], $typeInfo);
@@ -387,7 +388,7 @@ class Mysql implements StorageInterface, SchemaStorageInterface
             $columns[] = $this->columnFactory->create(
                 $column['COLUMN_NAME'],
                 \strlen($length) ? $length : '0',
-                $typeMap[\strtolower($column['DATA_TYPE'])] ?? ColumnInterface::TYPE_STRING,
+                $this->typeMap[\strtolower($column['DATA_TYPE'])] ?? ColumnInterface::TYPE_STRING,
                 []
             );
         }
@@ -406,7 +407,7 @@ class Mysql implements StorageInterface, SchemaStorageInterface
      * @codeCoverageIgnore
      * @throws \Exception
      */
-    private function prepare() : void
+    protected function prepare() : void
     {
         $state = [false, false];
         if (!$this->tableExists($this->config[self::CONFIG_TABLE])) {
@@ -455,7 +456,7 @@ class Mysql implements StorageInterface, SchemaStorageInterface
      * @param SchemaInterface $schema
      * @return bool
      */
-    private function schemaExists(string $table, SchemaInterface $schema) : bool
+    protected function schemaExists(string $table, SchemaInterface $schema) : bool
     {
         $actual = $this->describeTable($table);
         /** @var ColumnInterface[] $expected */
@@ -477,7 +478,7 @@ class Mysql implements StorageInterface, SchemaStorageInterface
      * @throws \LowlyPHP\Exception\ConfigException
      * @throws StorageReadException
      */
-    private function setConnection($reconnect = true) : void
+    protected function setConnection($reconnect = true) : void
     {
         $this->config = array_merge(
             $this->config,
@@ -498,7 +499,7 @@ class Mysql implements StorageInterface, SchemaStorageInterface
      * @param string $table
      * @return bool
      */
-    private function tableExists(string $table) : bool
+    protected function tableExists(string $table) : bool
     {
         /** @var \PDOStatement $statement */
         $statement = $this->connection->prepare(
@@ -525,7 +526,7 @@ class Mysql implements StorageInterface, SchemaStorageInterface
      * @throws StorageReadException
      * @codeCoverageIgnore
      */
-    private function validate() : bool
+    protected function validate() : bool
     {
         if (empty($this->config[self::CONFIG_HOST])) {
             throw new StorageReadException('No host configured.');
