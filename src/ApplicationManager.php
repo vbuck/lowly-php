@@ -275,14 +275,15 @@ class ApplicationManager
             if (isset($arguments[$parameter->getName()])) {
                 $output[] = $arguments[$parameter->getName()];
             } else {
-                $value = $parameter->getClass()
-                    ? $parameter->getClass()->getName()
+                $parameterClass = $this->getParameterClass($parameter);
+                $value = $parameterClass
+                    ? $parameterClass->getName()
                     : (
-                    $parameter->isDefaultValueAvailable() ? $parameter->getDefaultValue() : null
+                        $parameter->isDefaultValueAvailable() ? $parameter->getDefaultValue() : null
                     );
 
                 try {
-                    if ($parameter->getClass() && \is_string($value)) {
+                    if ($parameterClass && \is_string($value)) {
                         $value = $this->getObject($value);
                     }
                 } catch (\Exception $error) {
@@ -294,6 +295,20 @@ class ApplicationManager
         }
 
         return $output;
+    }
+
+    /**
+     * Resolve the class associated with the given parameter.
+     *
+     * @param \ReflectionParameter $parameter
+     * @return \ReflectionClass|null
+     * @throws \ReflectionException
+     */
+    private function getParameterClass(\ReflectionParameter $parameter) : ?\ReflectionClass
+    {
+        return $parameter->getType() && !$parameter->getType()->isBuiltin()
+            ? new \ReflectionClass($parameter->getType()->getName())
+            : null;
     }
 
     /**
