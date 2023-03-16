@@ -2,7 +2,7 @@
     "name": "vbuck/lowly-php",
     "description": "A humble framework for small PHP applications and microservices.",
     "type": "library",
-    "version": "0.2.0-alpha",
+    "version": "0.2.1-alpha",
     "require": {
         "php": ">=8.1",
         "ext-pdo": "*",

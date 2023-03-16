@@ -282,8 +282,9 @@ class Mysql implements StorageInterface, SchemaStorageInterface
 
             $statement->execute();
             $statement = null;
+            $lastInsertId = (int) ($this->connection->lastInsertId() ?: $data[$this->identifier]);
 
-            return (int) $this->connection->lastInsertId();
+            return $lastInsertId;
         } catch (\PDOException $error) {
             throw new StorageWriteException(\sprintf('Failed to save record: %s', $error->getMessage()));
         } catch (\Exception $error) {
