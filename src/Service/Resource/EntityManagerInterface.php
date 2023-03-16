@@ -33,9 +33,10 @@ interface EntityManagerInterface
      *
      * @param EntityInterface $entity
      * @param array|null $data
+     * @param bool $strict Set whether hydration should be allowed without a database record match
      * @throws \LowlyPHP\Exception\StorageReadException
      */
-    public function hydrate(EntityInterface $entity, array $data = null) : void;
+    public function hydrate(EntityInterface $entity, array $data = null, bool $strict = false) : void;
 
     /**
      * Persist the data state of the given entity with storage.

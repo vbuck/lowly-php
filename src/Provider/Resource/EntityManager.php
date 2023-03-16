@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace LowlyPHP\Provider\Resource;
 
+use LowlyPHP\Exception\StorageReadException;
 use LowlyPHP\Service\Resource\EntityInterface;
 use LowlyPHP\Service\Resource\EntityManagerInterface;
 use LowlyPHP\Service\Resource\EntityMapperInterface;
@@ -86,10 +87,10 @@ class EntityManager implements EntityManagerInterface
      *
      * @throws \LowlyPHP\Exception\ConfigException
      */
-    public function hydrate(EntityInterface $entity, array $data = null) : void
+    public function hydrate(EntityInterface $entity, array $data = null, bool $strict = false) : void
     {
         /** @var array $data */
-        $data = \array_merge($this->getData($entity), (array) $data);
+        $data = \array_merge($this->getData($entity, $strict), (array) $data);
         $this->entityMapper->map($data, $entity);
     }
 
@@ -143,11 +144,12 @@ class EntityManager implements EntityManagerInterface
      * Load the data for the given entity.
      *
      * @param EntityInterface $entity
+     * @param bool $strict
      * @return array
-     * @throws \LowlyPHP\Exception\StorageReadException
+     * @throws StorageReadException
      * @throws \LowlyPHP\Exception\ConfigException
      */
-    private function getData(EntityInterface $entity) : array
+    private function getData(EntityInterface $entity, bool $strict = false) : array
     {
         $cacheId = $this->getCacheId($entity);
 
@@ -161,6 +163,10 @@ class EntityManager implements EntityManagerInterface
         );
 
         $data = (array) $storage->load($entity->getEntityId());
+        if (empty($data) && $strict) {
+            throw new StorageReadException(\sprintf('No such entity with ID "%d."', $entity->getEntityId()));
+        }
+
         $this->cache[$cacheId] = $data;
 
         return $data;
