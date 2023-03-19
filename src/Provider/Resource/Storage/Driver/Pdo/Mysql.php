@@ -20,6 +20,7 @@ use LowlyPHP\Provider\Resource\Storage\SchemaFactory;
 use LowlyPHP\Service\Api\FilterInterface;
 use LowlyPHP\Service\Resource\EntityInterface;
 use LowlyPHP\Service\Resource\SerializerInterface;
+use LowlyPHP\Service\Resource\Storage\Schema\Column\ConditionProcessorPoolInterface;
 use LowlyPHP\Service\Resource\Storage\Schema\ColumnInterface;
 use LowlyPHP\Service\Resource\Storage\SchemaInterface;
 use LowlyPHP\Service\Resource\Storage\SchemaStorageInterface;
@@ -75,6 +76,9 @@ class Mysql implements StorageInterface, SchemaStorageInterface
     /** @var ColumnFactory */
     private $columnFactory;
 
+    /** @var ConditionProcessorPoolInterface */
+    private $conditionProcessorPool;
+
     /** @var bool */
     private $isPrepared = false;
 
@@ -92,6 +96,7 @@ class Mysql implements StorageInterface, SchemaStorageInterface
      * @param SerializerInterface $serializer
      * @param SchemaFactory $schemaFactory
      * @param ColumnFactory $columnFactory
+     * @param ConditionProcessorPoolInterface $conditionProcessorPool
      * @param SchemaInterface|null $schema
      * @param ApplicationManager|null $app
      * @throws StorageReadException
@@ -102,6 +107,7 @@ class Mysql implements StorageInterface, SchemaStorageInterface
         SerializerInterface $serializer,
         SchemaFactory $schemaFactory,
         ColumnFactory $columnFactory,
+        ConditionProcessorPoolInterface $conditionProcessorPool,
         SchemaInterface $schema = null,
         ApplicationManager $app = null
     ) {
@@ -110,6 +116,7 @@ class Mysql implements StorageInterface, SchemaStorageInterface
         $this->serializer = $serializer;
         $this->schemaFactory = $schemaFactory;
         $this->columnFactory = $columnFactory;
+        $this->conditionProcessorPool = $conditionProcessorPool;
         $this->setConnection(false);
 
         if ($schema !== null) {
@@ -191,14 +198,12 @@ class Mysql implements StorageInterface, SchemaStorageInterface
 
             /** @var \LowlyPHP\Service\Api\FilterInterface $filter */
             foreach (\array_values($filters) as $index => $filter) {
-                $value = \in_array(
-                    $filter->getComparator(),
-                    [FilterInterface::COMPARATOR_NOT_NULL, FilterInterface::COMPARATOR_NULL]
-                ) ? '' : $this->connection->quote((string) $filter->getValue());
-
-                if ($filter->getComparator() === FilterInterface::COMPARATOR_IN_SET) {
-                    $value = '(' . \trim($value, '()') . ')';
-                }
+                $value = $this->conditionProcessorPool->process(
+                    $filter->getValue(),
+                    $filter,
+                    $this->schema->getColumn($filter->getField()),
+                    $this->connection
+                );
 
                 $conditions[] = \trim(
                     \sprintf(

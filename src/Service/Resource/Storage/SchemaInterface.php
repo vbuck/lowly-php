@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace LowlyPHP\Service\Resource\Storage;
 
+use LowlyPHP\Service\Resource\Storage\Schema\ColumnInterface;
+
 /**
  * This interface provides a descriptor for storage schema.
  *
@@ -25,9 +27,18 @@ interface SchemaInterface
      *
      * Columns comprise the table-based structure of the schema.
      *
-     * @return \LowlyPHP\Service\Resource\Storage\Schema\ColumnInterface[]
+     * @return ColumnInterface[]
      */
     public function getColumns() : array;
+
+    /**
+     * Retrieve a single column by name.
+     *
+     * @param string $key
+     * @return ColumnInterface
+     * @throws \InvalidArgumentException
+     */
+    public function getColumn(string $key) : ColumnInterface;
 
     /**
      * Get the name of the schema.

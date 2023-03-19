@@ -19,6 +19,14 @@
             "charset": "utf8"
         }
     },
+    "schema_management": {
+        "columns": {
+            "conditions": {
+                "nullnotnull": "LowlyPHP\\Provider\\Resource\\Storage\\Schema\\Column\\ConditionProcessor\\NullNotNull",
+                "inset": "LowlyPHP\\Provider\\Resource\\Storage\\Schema\\Column\\ConditionProcessor\\InSet"
+            }
+        }
+    },
     "providers": {
         "LowlyPHP\\Service\\Api\\FilterInterface": {
             "type": "LowlyPHP\\Provider\\Api\\Filter"
@@ -28,6 +36,9 @@
         },
         "LowlyPHP\\Service\\Resource\\Storage\\Schema\\ColumnInterface": {
             "type": "LowlyPHP\\Provider\\Resource\\Storage\\Schema\\Column"
+        },
+        "LowlyPHP\\Service\\Resource\\Storage\\Schema\\Column\\ConditionProcessorPoolInterface": {
+            "type": "LowlyPHP\\Provider\\Resource\\Storage\\Schema\\Column\\ConditionProcessorPool"
         },
         "LowlyPHP\\Service\\Resource\\Storage\\SchemaInterface": {
             "type": "LowlyPHP\\Provider\\Resource\\Storage\\Schema"

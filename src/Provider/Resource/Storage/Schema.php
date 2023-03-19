@@ -74,4 +74,18 @@ class Schema implements SchemaInterface
     {
         return $this->source;
     }
+
+    /**
+     * @inheritdoc
+     */
+    public function getColumn(string $key) : ColumnInterface
+    {
+        foreach ($this->columns as $column) {
+            if ($column->getName() === $key) {
+                return $column;
+            }
+        }
+
+        throw new \InvalidArgumentException(\sprintf('Column "%s" does not exist.', $key));
+    }
 }
