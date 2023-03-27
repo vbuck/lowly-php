@@ -13,8 +13,10 @@ namespace LowlyPHP\Provider\Resource\Storage\Schema\Column;
 
 use LowlyPHP\ApplicationManager;
 use LowlyPHP\Service\Api\FilterInterface;
+use LowlyPHP\Service\Resource\Storage\Schema\Column\ConditionProcessorInterface;
 use LowlyPHP\Service\Resource\Storage\Schema\Column\ConditionProcessorPoolInterface;
 use LowlyPHP\Service\Resource\Storage\Schema\ColumnInterface;
+use LowlyPHP\Service\Resource\Storage\SchemaStorageInterface;
 
 class ConditionProcessorPool implements ConditionProcessorPoolInterface
 {
@@ -35,12 +37,34 @@ class ConditionProcessorPool implements ConditionProcessorPoolInterface
      */
     public function process(string $value, FilterInterface $filter, ColumnInterface $column, \PDO $connection) : string
     {
-        foreach ((array) $this->appManager->config('schema_management.conditions') as $class) {
-            /** @var \LowlyPHP\Service\Resource\Storage\Schema\Column\ConditionProcessorInterface $processor */
+        foreach ((array) $this->appManager->config('schema_management.columns.conditions') as $class) {
+            /** @var ConditionProcessorInterface $processor */
             $processor = $this->appManager->getObject($class);
             $value = $processor->execute($value, $filter, $column, $connection);
         }
 
+        /** @var ConditionProcessorInterface|null $customProcessor */
+        $customProcessor = $this->getUserDefinedProcessor($column);
+        if ($customProcessor) {
+            $value = $customProcessor->execute($value, $filter, $column, $connection);
+        }
+
         return $value;
+    }
+
+    /**
+     * @param ColumnInterface $column
+     * @return ConditionProcessorInterface|null
+     */
+    private function getUserDefinedProcessor(ColumnInterface $column): ?ConditionProcessorInterface
+    {
+        $metadata = $column->getMetadata();
+        $processor = $metadata[SchemaStorageInterface::META_KEY_CONDITION_PROCESSOR] ?? false;
+
+        if (!$processor) {
+            return null;
+        }
+
+        return $processor;
     }
 }

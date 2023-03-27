@@ -17,6 +17,7 @@ use LowlyPHP\Provider\Resource\Storage\Schema\ColumnFactory;
 use LowlyPHP\Service\Resource\SerializableInterface;
 use LowlyPHP\Service\Resource\EntityInterface;
 use LowlyPHP\Service\Resource\ScopedEntityInterface;
+use LowlyPHP\Service\Resource\Storage\Schema\Column\ConditionProcessorInterface;
 use LowlyPHP\Service\Resource\Storage\Schema\ColumnInterface;
 use LowlyPHP\Service\Resource\Storage\SchemaInterface;
 use LowlyPHP\Service\Resource\Storage\SchemaMapperInterface;
@@ -110,28 +111,6 @@ class SchemaMapper implements SchemaMapperInterface
     }
 
     /**
-     * Resolve the storage source name from the given data.
-     *
-     * Used to handle source name transformations, including scoped storage mapping.
-     *
-     * @param EntityInterface $entity
-     * @param string $sourceName
-     * @return string
-     */
-    private function getSourceName(EntityInterface $entity, $sourceName = '') : string
-    {
-        if (empty($sourceName)) {
-            return '';
-        }
-
-        if ($entity instanceof ScopedEntityInterface && $entity->getScopeId() > 0) {
-            return \sprintf('%s_%d', $sourceName, $entity->getScopeId());
-        }
-
-        return $sourceName;
-    }
-
-    /**
      * Attempt to convert a complex return type to its corresponding column type.
      *
      * @param string $type
@@ -215,12 +194,52 @@ class SchemaMapper implements SchemaMapperInterface
                 $this->defaultLengths[$type] ?? static::DEFAULT_LENGTH,
                 $type,
                 [
-                    SchemaStorageInterface::META_KEY_IDENTIFIER => $key === EntityInterface::ID
+                    SchemaStorageInterface::META_KEY_IDENTIFIER => $key === EntityInterface::ID,
+                    SchemaStorageInterface::META_KEY_CONDITION_PROCESSOR => $this->getConditionProcessor(
+                        \get_class($entity),
+                        $key
+                    )
                 ]
             );
         }
 
         return $columns;
+    }
+
+    /**
+     * @param string $entityClass
+     * @param string $field
+     * @return ConditionProcessorInterface|null
+     * @throws ConfigException
+     */
+    private function getConditionProcessor(string $entityClass, string $field) : ?ConditionProcessorInterface
+    {
+        try {
+            $class = $this->app->config(
+                \sprintf('providers.%s.schema.columns.%s.condition', $entityClass, $field)
+            );
+
+            if (empty($class) || !\class_exists($class)) {
+                return null;
+            }
+
+            $processor = $this->app->getObject($class);
+
+            if (!($processor instanceof ConditionProcessorInterface)) {
+                throw new ConfigException(
+                    \sprintf(
+                        'Condition processor for field "%s" must be an instance of ConditionProcessorInterface.',
+                        $field
+                    )
+                );
+            }
+
+            return $processor;
+        } catch (ConfigException $error) {
+            throw $error;
+        } catch (\Exception $error) {
+            return null;
+        }
     }
 
     /**
@@ -282,5 +301,27 @@ class SchemaMapper implements SchemaMapperInterface
         }
 
         return $this->createSchema($entity, $config);
+    }
+
+    /**
+     * Resolve the storage source name from the given data.
+     *
+     * Used to handle source name transformations, including scoped storage mapping.
+     *
+     * @param EntityInterface $entity
+     * @param string $sourceName
+     * @return string
+     */
+    private function getSourceName(EntityInterface $entity, $sourceName = '') : string
+    {
+        if (empty($sourceName)) {
+            return '';
+        }
+
+        if ($entity instanceof ScopedEntityInterface && $entity->getScopeId() > 0) {
+            return \sprintf('%s_%d', $sourceName, $entity->getScopeId());
+        }
+
+        return $sourceName;
     }
 }

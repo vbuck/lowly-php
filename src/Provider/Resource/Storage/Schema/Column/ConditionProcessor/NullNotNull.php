@@ -28,6 +28,6 @@ class NullNotNull implements ConditionProcessorInterface
         return \in_array(
             $filter->getComparator(),
             [FilterInterface::COMPARATOR_NOT_NULL, FilterInterface::COMPARATOR_NULL]
-        ) ? '' : $connection->quote((string) $filter->getValue());
+        ) ? '' : $value;
     }
 }

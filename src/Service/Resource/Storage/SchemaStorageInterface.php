@@ -17,6 +17,16 @@ namespace LowlyPHP\Service\Resource\Storage;
 interface SchemaStorageInterface
 {
     /**
+     * Condition processor reference.
+     *
+     * Holds a reference to an condition processor of the value passed to a query.
+     *
+     * Type: ConditionProcessorInterface
+     * Usage: [SchemaStorageInterface::META_KEY_CONDITION_PROCESSOR => ConditionProcessorInterface]
+     */
+    const META_KEY_CONDITION_PROCESSOR = 'condition_processor';
+
+    /**
      * Default value property.
      *
      * Used to define the default column value when none is present on record update.

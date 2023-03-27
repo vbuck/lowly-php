@@ -199,7 +199,7 @@ class Mysql implements StorageInterface, SchemaStorageInterface
             /** @var \LowlyPHP\Service\Api\FilterInterface $filter */
             foreach (\array_values($filters) as $index => $filter) {
                 $value = $this->conditionProcessorPool->process(
-                    $filter->getValue(),
+                    $this->connection->quote($filter->getValue()),
                     $filter,
                     $this->schema->getColumn($filter->getField()),
                     $this->connection
@@ -207,7 +207,7 @@ class Mysql implements StorageInterface, SchemaStorageInterface
 
                 $conditions[] = \trim(
                     \sprintf(
-                        '%s `%s` %s %s',
+                        '%s %s %s %s',
                         $index > 0 ? $filter->getOperator() : '',
                         $filter->getField(),
                         $filter->getComparator(),
