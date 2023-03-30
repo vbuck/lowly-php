@@ -23,6 +23,7 @@ interface FilterInterface
     const COMPARATOR_LT = '<';
     const COMPARATOR_LTE = '<=';
     const COMPARATOR_NEQ = '!=';
+    const COMPARATOR_NONE = '';
     const COMPARATOR_LIKE = 'LIKE';
     const COMPARATOR_NLIKE = 'NOT LIKE';
     const COMPARATOR_NOT_NULL = 'IS NOT NULL';

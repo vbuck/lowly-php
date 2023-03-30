@@ -30,6 +30,7 @@ class Filter implements FilterInterface
         self::COMPARATOR_LT,
         self::COMPARATOR_LTE,
         self::COMPARATOR_NEQ,
+        self::COMPARATOR_NONE,
         self::COMPARATOR_LIKE,
         self::COMPARATOR_NLIKE,
         self::COMPARATOR_NOT_NULL,
