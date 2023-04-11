@@ -54,7 +54,8 @@ function help() {
 
 function check_pid(&$pid, $asBool = false) {
     sleep(1);
-    $pid = \exec(\sprintf('ps -o pid | grep %d || echo "0"', $pid)) === "0"
+    \exec(\sprintf('ps ax -o pid | grep "^\s*%d$"', $pid), $result, $code);
+    $pid = !empty($code)
         ? ($asBool ? false : \sprintf('Process ID %d not found.', $pid))
         : $pid;
 }
