@@ -34,6 +34,9 @@
         "LowlyPHP\\Service\\Api\\RepositorySearchInterface": {
             "type": "LowlyPHP\\Provider\\Api\\RepositorySearch"
         },
+        "LowlyPHP\\Service\\Api\\RepositorySearchResultInterface": {
+            "type": "LowlyPHP\\Provider\\Api\\RepositorySearchResult"
+        },
         "LowlyPHP\\Service\\Resource\\Storage\\Schema\\ColumnInterface": {
             "type": "LowlyPHP\\Provider\\Resource\\Storage\\Schema\\Column"
         },
