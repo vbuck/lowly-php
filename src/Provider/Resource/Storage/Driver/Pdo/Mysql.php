@@ -577,19 +577,20 @@ class Mysql implements StorageInterface, SchemaStorageInterface
 
         /** @var \LowlyPHP\Service\Api\FilterInterface $filter */
         foreach (\array_values($filters) as $index => $filter) {
+            $mutableFilter = clone $filter;
             $value = $this->conditionProcessorPool->process(
-                $this->connection->quote($filter->getValue()),
-                $filter,
-                $this->schema->getColumn($filter->getField()),
+                $this->connection->quote($mutableFilter->getValue()),
+                $mutableFilter,
+                $this->schema->getColumn($mutableFilter->getField()),
                 $this->connection
             );
 
             $conditions[] = \trim(
                 \sprintf(
                     '%s %s %s %s',
-                    $index > 0 ? $filter->getOperator() : '',
-                    $filter->getField(),
-                    $filter->getComparator(),
+                    $index > 0 ? $mutableFilter->getOperator() : '',
+                    $mutableFilter->getField(),
+                    $mutableFilter->getComparator(),
                     $value
                 )
             );
