@@ -17,7 +17,6 @@ use LowlyPHP\Exception\StorageWriteException;
 use LowlyPHP\Provider\Resource\Storage\Schema\ColumnFactory;
 use LowlyPHP\Provider\Resource\Storage\Schema\Converter\Sql as SchemaConverter;
 use LowlyPHP\Provider\Resource\Storage\SchemaFactory;
-use LowlyPHP\Service\Api\FilterInterface;
 use LowlyPHP\Service\Resource\EntityInterface;
 use LowlyPHP\Service\Resource\SerializerInterface;
 use LowlyPHP\Service\Resource\Storage\Schema\Column\ConditionProcessorPoolInterface;
@@ -133,6 +132,43 @@ class Mysql implements StorageInterface, SchemaStorageInterface
     }
 
     /**
+     * @inheritdoc
+     *
+     * @param \LowlyPHP\Service\Api\FilterInterface[] $filters
+     * @return int The total number of records matching the given criteria.
+     * @throws \LowlyPHP\Exception\StorageReadException
+     * @throws \InvalidArgumentException
+     */
+    public function count(array $filters) : int
+    {
+        try {
+            $this->connect();
+            $conditions = $this->prepareConditions($filters);
+            /** @var \PDOStatement $statement */
+            $statement = $this->connection->prepare(
+                \trim(
+                    \sprintf(
+                        'SELECT COUNT(*) FROM `%s` %s %s',
+                        $this->config[self::CONFIG_TABLE],
+                        !empty($conditions) ? 'WHERE' : '',
+                        \implode(' ', $conditions)
+                    )
+                )
+            );
+            $statement->execute();
+
+            $result = $statement->fetchColumn(0);
+            $statement = null;
+
+            return $result;
+        } catch (\PDOException $error) {
+            throw new StorageReadException(\sprintf('Failed to query records: %s', $error->getMessage()));
+        } catch (\Exception $error) {
+            throw new StorageReadException(\sprintf('Encountered error of type: %s', \get_class($error)));
+        }
+    }
+
+    /**
      * {@inheritdoc}
      */
     public function delete(int $id) : void
@@ -193,28 +229,8 @@ class Mysql implements StorageInterface, SchemaStorageInterface
     {
         try {
             $this->connect();
-            $conditions = [];
+            $conditions = $this->prepareConditions($filters);
             $page = $page > 1 ? ($page - 1) : 0;
-
-            /** @var \LowlyPHP\Service\Api\FilterInterface $filter */
-            foreach (\array_values($filters) as $index => $filter) {
-                $value = $this->conditionProcessorPool->process(
-                    $this->connection->quote($filter->getValue()),
-                    $filter,
-                    $this->schema->getColumn($filter->getField()),
-                    $this->connection
-                );
-
-                $conditions[] = \trim(
-                    \sprintf(
-                        '%s %s %s %s',
-                        $index > 0 ? $filter->getOperator() : '',
-                        $filter->getField(),
-                        $filter->getComparator(),
-                        $value
-                    )
-                );
-            }
 
             /** @var \PDOStatement $statement */
             $statement = $this->connection->prepare(
@@ -547,5 +563,38 @@ class Mysql implements StorageInterface, SchemaStorageInterface
         }
 
         return true;
+    }
+
+    /**
+     * Prepare SQL conditions for the given filters.
+     *
+     * @param array $filters
+     * @return string[]
+     */
+    private function prepareConditions(array $filters) : array
+    {
+        $conditions = [];
+
+        /** @var \LowlyPHP\Service\Api\FilterInterface $filter */
+        foreach (\array_values($filters) as $index => $filter) {
+            $value = $this->conditionProcessorPool->process(
+                $this->connection->quote($filter->getValue()),
+                $filter,
+                $this->schema->getColumn($filter->getField()),
+                $this->connection
+            );
+
+            $conditions[] = \trim(
+                \sprintf(
+                    '%s %s %s %s',
+                    $index > 0 ? $filter->getOperator() : '',
+                    $filter->getField(),
+                    $filter->getComparator(),
+                    $value
+                )
+            );
+        }
+
+        return $conditions;
     }
 }

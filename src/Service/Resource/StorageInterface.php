@@ -17,6 +17,16 @@ namespace LowlyPHP\Service\Resource;
 interface StorageInterface
 {
     /**
+     * Query storage for record counts.
+     *
+     * @param \LowlyPHP\Service\Api\FilterInterface[] $filters
+     * @return int The total number of records matching the given criteria.
+     * @throws \LowlyPHP\Exception\StorageReadException
+     * @throws \InvalidArgumentException
+     */
+    public function count(array $filters) : int;
+
+    /**
      * Delete a record from storage by its ID.
      *
      * @param int $id The record ID.
