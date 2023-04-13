@@ -41,10 +41,10 @@ interface RepositoryInterface
      * Search the repository by the given criteria and return all matching records.
      *
      * @param RepositorySearchInterface $criteria
-     * @return EntityInterface[]
+     * @return RepositorySearchResultInterface
      * @throws \LowlyPHP\Exception\StorageReadException
      */
-    public function list(RepositorySearchInterface $criteria) : array;
+    public function list(RepositorySearchInterface $criteria) : RepositorySearchResultInterface;
 
     /**
      * Lookup an entity by the given record ID.
