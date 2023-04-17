@@ -240,7 +240,7 @@ class Mysql implements StorageInterface, SchemaStorageInterface
                         $this->config[self::CONFIG_TABLE],
                         !empty($conditions) ? 'WHERE' : '',
                         \implode(' ', $conditions),
-                        $limit > 0 ? \sprintf(' LIMIT %d, %d', $page, $limit) : ''
+                        $limit > 0 ? \sprintf(' LIMIT %d, %d', ($page * $limit), $limit) : ''
                     )
                 )
             );
