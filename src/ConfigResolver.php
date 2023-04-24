@@ -21,7 +21,7 @@ class ConfigResolver
     /**
      * Environment can be initialized with a custom configuration path if using a non-standard setup.
      */
-    const ENV_CONFIG_PATH = 'CONFIG_PATH';
+    const ENV_CONFIG_PATH = 'LOWLYPHP_APP_CONFIG_PATH';
 
     const FILENAME = 'config.json';
 
@@ -47,7 +47,9 @@ class ConfigResolver
     public function resolve(string $path = '') : string
     {
         if (empty($path) || !\is_readable($path)) {
-            $path = $_ENV[self::ENV_CONFIG_PATH] ?? \dirname(__DIR__) . DIRECTORY_SEPARATOR . self::FILENAME;
+            $path = $_ENV[self::ENV_CONFIG_PATH]
+                ?? $_SERVER[self::ENV_CONFIG_PATH]
+                ?? \dirname(__DIR__) . DIRECTORY_SEPARATOR . self::FILENAME;
         }
 
         if (!\is_readable($path)) {
