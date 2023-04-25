@@ -6,7 +6,6 @@
     },
     "paths": {
         "LowlyPHP": "./src",
-        "LowlyPHP\\web": "./web",
         "LowlyPHP\\*": "./extensions"
     },
     "connections": {

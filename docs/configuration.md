@@ -12,7 +12,7 @@ There are three ways to customize:
 
  1. Edit `config.json.dist` directly (not recommended)
  2. Copy `config.json.dist` to `config.json` and edit (recommended)
- 3. Use environment variable `CONFIG_PATH` to specify a custom path (advanced)
+ 3. Use environment variable `LOWLYPHP_APP_CONFIG_PATH` to specify a custom path (advanced)
  
 Default configuration is _merged_ with customizations. Therefore, it is possible to extend the defaults by specifying
 only the changes you need. For example, the following is a valid `config.json` file:
